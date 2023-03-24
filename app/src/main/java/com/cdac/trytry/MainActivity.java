@@ -39,6 +39,5 @@ public class MainActivity extends AppCompatActivity {
     private void requestWritePermission() {
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO,Manifest.permission.MODIFY_AUDIO_SETTINGS,WRITE_EXTERNAL_STORAGE},1);
     }
-
 }
 

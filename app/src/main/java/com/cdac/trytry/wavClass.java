@@ -20,7 +20,7 @@ public class wavClass {
     String tempRawFile = "temp_record.raw";
     String tempWavFile = "final_record.wav";
     final int bpp = 16;
-    int sampleRate = 44100;
+    int sampleRate = 8000;
     int channel = AudioFormat.CHANNEL_IN_STEREO;
     int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
     AudioRecord recorder = null;
@@ -31,7 +31,7 @@ public class wavClass {
     public wavClass(String path) {
         try {
             filePath = path;
-            bufferSize = AudioRecord.getMinBufferSize(8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+            bufferSize = AudioRecord.getMinBufferSize(sampleRate, channel, AudioFormat.ENCODING_PCM_16BIT);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -52,11 +52,33 @@ public class wavClass {
                 String path = getPath(tempRawFile);
                 FileOutputStream fileOutputStream = new FileOutputStream(path);
                 int read;
+                int lowFrequency = 10;
+                int highFrequency = 2000;
+                int centerFrequency = (lowFrequency + highFrequency)/2;
+                int widthFrequency = Math.abs(highFrequency - lowFrequency);
+                Butterworth butterworth = new Butterworth();
+                butterworth.bandPass(4, sampleRate, centerFrequency, widthFrequency);
+
                 while (isRecording) {
                     read = recorder.read(data, 0, bufferSize);
                     if (AudioRecord.ERROR_INVALID_OPERATION != read) {
                         try {
-                            fileOutputStream.write(data);
+//                            fileOutputStream.write(data);
+                            double[] filteredData = new double[bufferSize / 2];
+                            for (int i = 0; i < bufferSize / 2; i++) {
+                                filteredData[i] = (double) data[2*i] + (double) data[2*i+1] * 256;
+                            }
+                            for (int i = 0; i < filteredData.length; i++) {
+                                filteredData[i] = butterworth.filter(filteredData[i]);
+                            }
+                            byte[] filteredBytes = new byte[bufferSize];
+                            for (int i = 0; i < bufferSize / 2; i++) {
+                                short val = (short) Math.round(filteredData[i]);
+                                filteredBytes[2*i] = (byte) (val & 0xff);
+                                filteredBytes[2*i+1] = (byte) ((val >> 8) & 0xff);
+                            }
+                            fileOutputStream.write(filteredBytes);
+
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
